@@ -7,7 +7,9 @@ type PropsType = FrameMixin & LayoutMixin & BlendMixin & ConstraintMixin & Expor
 const isSymbol = (node:BaseTypeNode) => node.type == "COMPONENT" || node.type == "INSTANCE";
 const isContainer = (node:BaseTypeNode) => node.type == "GROUP" || node.type == "FRAME";
 
-function getValidParent(parent:BaseParentNode, parents:Array<BaseParentNode> = []):BaseParentNode {
+const sortByDepth = (a, b) => a.parent.children.indexOf(a) - b.parent.children.indexOf(b);
+
+function getValidParent(parent:BaseParentNode, parents:BaseParentNode[] = []):BaseParentNode {
 	if (parent.type == "PAGE" && parents.length == 0) {
 		return parent;
 	} else if (parent.type != "DOCUMENT") {
@@ -17,6 +19,29 @@ function getValidParent(parent:BaseParentNode, parents:Array<BaseParentNode> = [
 		for (const parent of parents) if (isSymbol(parent)) return parent;
 		return parents[parents.length - 1];
 	}
+}
+
+function moveComponents(node: BaseParentNode, moved: ComponentNode[] = []) {
+	node.children.forEach((child) => {
+		switch (child.type) {
+			case "COMPONENT": {
+				const component = child as ComponentNode;
+				console.log('>>> ' + component.name);
+				const instance = component.createInstance();
+				instance.x = component.x;
+				instance.y = component.y;
+				node.insertChild(node.children.indexOf(component), instance);
+				moved.push(component);
+				break;
+			}
+			case "FRAME":
+			case "GROUP": {
+				moveComponents(child, moved);
+				break;
+			}
+			default:
+		}
+	});
 }
 
 function copyProps(component: ComponentNode, from: PropsType, isFrame = false) {
@@ -51,7 +76,7 @@ let select = [];
 
 if (selection.length > 0) {
 
-	let groups:Map<String, Array<SceneNode>> = new Map();
+	let groups:Map<String, SceneNode[]> = new Map();
 
 	selection.forEach(node => {
 		const pn = node.parent.id;
@@ -60,22 +85,59 @@ if (selection.length > 0) {
 	});
 
 	groups.forEach(nodes => {
-		const first = nodes[0];
-		const last = nodes[nodes.length - 1];
+
+		let indexShift = nodes.length;
+
+		nodes.sort(sortByDepth);
+
+		let first = nodes[0];
+		let last = nodes[nodes.length - 1];
+
 		const parent = first.parent;
+
+		let index = parent.children.indexOf(last) + 1;
+
+		let validParent = getValidParent(parent as BaseParentNode);
+
+		const moved:ComponentNode[] = [];
+		nodes.forEach(node => {
+			if (isContainer(node)) moveComponents(node as BaseParentNode, moved);
+		});
+
+		nodes.sort(sortByDepth);
+
+		let instanced = false;
+
+		nodes = nodes.map(node => {
+			if (node.type == "COMPONENT") {
+				const instance = node.createInstance();
+				instance.x = node.x;
+				instance.y = node.y;
+				instanced = true;
+				indexShift--;
+				return instance;
+			}
+			return node;
+		});
+
+		first = nodes[0];
+		last = nodes[nodes.length - 1];
+
 		const name = last.name;
 
-		if (isSymbol(parent)) {
-
-		}
-
-		let index = parent.children.indexOf(first);
+		let nx = first.x;
+		let ny = first.y;
+		nodes.forEach(n => {
+			nx = Math.min(nx, n.x);
+			ny = Math.min(ny, n.y);
+		});
 
 		const container = nodes.length == 1 && isContainer(first);
 		let group:FrameNode = container ? (first as FrameNode) : figma.group(nodes, parent);
+
 		let component = figma.createComponent();
-		component.x = group.x;
-		component.y = group.y;
+		component.x = nx;
+		component.y = ny;
 		component.resize(group.width, group.height);
 
 		const isFrame = group.type == "FRAME";
@@ -83,15 +145,26 @@ if (selection.length > 0) {
 		if (container) {
 			copyProps(component, group, isFrame);
 		} else if (nodes.length == 1) {
-			console.log(first);
-			console.log(first.name);
 			copyProps(component, first as PropsType);
 		}
 
+		const gx = group.x;
+		const gy = group.y;
+
+		const mx = component.x + component.width + 64;
+		let my = component.y;
+
+		moved.forEach((m) => {
+			validParent.appendChild(m);
+			m.x = mx;
+			m.y = my;
+			my += m.height + 64;
+		});
+
 		group.children.forEach(node => {
 			if (!isFrame) {
-				node.x -= component.x;
-				node.y -= component.y;
+				node.x -= gx;
+				node.y -= gy;
 			}
 			component.appendChild(node);
 		});
@@ -99,9 +172,8 @@ if (selection.length > 0) {
 		if (isFrame) group.remove();
 
 		component.name = name;
-		let validParent = getValidParent(parent as BaseParentNode);
 
-		const near = parent.type != "COMPONENT" ? null : validParent;
+		/*const near = parent.type != "COMPONENT" ? null : validParent;
 
 		if (near != null) {
 			const instance = component.createInstance();
@@ -111,12 +183,13 @@ if (selection.length > 0) {
 			component.x = near.x + near.width + 34;
 			component.y = near.y;
 			index = parent.children.indexOf(near as SceneNode) + 1;
+		}*/
+
+		if (isSymbol(validParent)) {
+			validParent = validParent.parent as BaseParentNode;
 		}
 
-		if (isSymbol(validParent)) validParent = validParent.parent as BaseParentNode;
-
-		console.log(validParent.name);
-		validParent.insertChild(index, component);
+		validParent.insertChild(index - indexShift, component);
 		select.push(component);
 	});
 }
