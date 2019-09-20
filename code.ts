@@ -72,11 +72,13 @@ const selection = figma.currentPage.selection;
 
 let note = null;
 
-let select = [];
+const select = [];
 
 if (selection.length > 0) {
 
-	let groups:Map<String, SceneNode[]> = new Map();
+	const instances = [];
+
+	const groups:Map<String, SceneNode[]> = new Map();
 
 	selection.forEach(node => {
 		const pn = node.parent.id;
@@ -98,6 +100,11 @@ if (selection.length > 0) {
 		let index = parent.children.indexOf(last) + 1;
 
 		let validParent = getValidParent(parent as BaseParentNode);
+
+		if (validParent.type == "INSTANCE") {
+			instances.push(validParent as InstanceNode);
+			return;
+		}
 
 		const moved:ComponentNode[] = [];
 		nodes.forEach(node => {
@@ -173,25 +180,36 @@ if (selection.length > 0) {
 
 		component.name = name;
 
-		/*const near = parent.type != "COMPONENT" ? null : validParent;
+		if (isSymbol(validParent)) {
 
-		if (near != null) {
 			const instance = component.createInstance();
 			instance.x = component.x;
 			instance.y = component.y;
-			parent.insertChild(index, instance);
-			component.x = near.x + near.width + 34;
-			component.y = near.y;
-			index = parent.children.indexOf(near as SceneNode) + 1;
-		}*/
 
-		if (isSymbol(validParent)) {
-			validParent = validParent.parent as BaseParentNode;
+			parent.children.length - 1 >= index ? parent.insertChild(index - 1, instance) : parent.appendChild(instance);
+
+			const near = validParent as BaseParentNode;
+
+			console.log([near.name, near.x, near.y]);
+
+			component.x = near.x + near.width + 64;
+			component.y = near.y;
+
+			(validParent.parent as BaseParentNode).insertChild(parent.parent.children.indexOf(validParent as SceneNode) + 1, component);
+
+		} else {
+
+			validParent.insertChild(index - indexShift, component);
 		}
 
-		validParent.insertChild(index - indexShift, component);
+		console.log(validParent.name);
 		select.push(component);
+
 	});
+
+	if (instances.length > 0) {
+		note = "Can't create components inside instances, try again in master components";
+	}
 }
 
 if (note) figma.notify(note);
