@@ -26,7 +26,6 @@ function moveComponents(node: BaseParentNode, moved: ComponentNode[] = []) {
 		switch (child.type) {
 			case "COMPONENT": {
 				const component = child as ComponentNode;
-				console.log('>>> ' + component.name);
 				const instance = component.createInstance();
 				instance.x = component.x;
 				instance.y = component.y;
@@ -44,9 +43,9 @@ function moveComponents(node: BaseParentNode, moved: ComponentNode[] = []) {
 	});
 }
 
-function copyProps(component: ComponentNode, from: PropsType, isFrame = false) {
+function copyProps(component: ComponentNode, from: PropsType, type: NodeType) {
 
-	if (isFrame) {
+	if (type == "FRAME") {
 		component.layoutGrids = from.layoutGrids;
 		component.gridStyleId = from.gridStyleId;
 		component.clipsContent = from.clipsContent;
@@ -58,9 +57,10 @@ function copyProps(component: ComponentNode, from: PropsType, isFrame = false) {
 	component.isMask = from.isMask;
 	component.effects = from.effects;
 	component.effectStyleId = from.effectStyleId;
-	component.constraints = from.constraints;
 	component.exportSettings = from.exportSettings;
 	component.rotation = from.rotation;
+
+	if (type != "GROUP") component.constraints = from.constraints;
 
 	if (from.backgrounds) {
 		component.backgrounds = from.backgrounds;
@@ -150,9 +150,9 @@ if (selection.length > 0) {
 		const isFrame = group.type == "FRAME";
 
 		if (container) {
-			copyProps(component, group, isFrame);
+			copyProps(component, group, group.type);
 		} else if (nodes.length == 1) {
-			copyProps(component, first as PropsType);
+			copyProps(component, first as PropsType, first.type);
 		}
 
 		const gx = group.x;
@@ -186,11 +186,9 @@ if (selection.length > 0) {
 			instance.x = component.x;
 			instance.y = component.y;
 
-			parent.children.length - 1 >= index ? parent.insertChild(index - 1, instance) : parent.appendChild(instance);
+			parent.children.length >= index ? parent.insertChild(index - 1, instance) : parent.appendChild(instance);
 
 			const near = validParent as BaseParentNode;
-
-			console.log([near.name, near.x, near.y]);
 
 			component.x = near.x + near.width + 64;
 			component.y = near.y;
@@ -202,7 +200,6 @@ if (selection.length > 0) {
 			validParent.insertChild(index - indexShift, component);
 		}
 
-		console.log(validParent.name);
 		select.push(component);
 
 	});
