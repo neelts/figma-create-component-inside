@@ -1,22 +1,16 @@
-This plugin template uses Typescript. If you are familiar with Javascript, Typescript will
-look very familiar. In fact, valid Javascript code is already valid Typescript code.
+# Figma Create Component Inside
 
-Typescript adds type annotations to variables. This allows code editors such as Visual Studio Code
-to provide information about the Figma API while you are writing code, as well as help catch bugs
-you previously didn't notice.
+Create components anywhere you want! *
 
-For more information, visit https://www.typescriptlang.org/
+You can use this plugin instead of the standard Create Component command.
 
-Using Typescript requires a compiler to convert Typescript (code.ts) into Javascript (code.js)
-for the browser to run.
+You can also select multiple groups of items within different frames, groups or comopnents, so that components will be created within their parents automatically.
 
-To get the TypeScript compiler working:
+Subscribe to updates, discuss and report bugs in Telegram:
+https://t.me/nfigma
 
-1. Download Visual Studio Code if you haven't already: https://code.visualstudio.com/.
-2. Install the TypeScript compiler globally: `sudo npm install -g typescript`.
-3. Open this directory in Visual Studio Code.
-4. Compile TypeScript to JavaScript: Run the "Terminal > Run Build Task..." menu item,
-    then select "tsc: watch - tsconfig.json". You will have to do this again every time
-    you reopen Visual Studio Code.
+* Except for the case inside an instance (but, of course, it works with a master components).
 
-That's it! Visual Studio Code will regenerate the JavaScript file every time you save.
+#### Icon & Artwork:
+
+https://www.figma.com/file/PPhI199En4E0awqyUGRKD5/Figma-Plugins-by-Neelts?node-id=38%3A1779
