@@ -1,13 +1,12 @@
 type BaseTypeNode = (BaseNodeMixin & { type: NodeType });
 
-type BaseParentNode = (BaseTypeNode & DefaultContainerMixin) | null;
+type BaseParentNode = (BaseTypeNode & ChildrenMixin & DimensionAndPositionMixin) | null;
 
-type PropsType = FrameMixin & LayoutMixin & BlendMixin & ConstraintMixin & ExportMixin;
-
+type PropsType = BaseFrameMixin & LayoutMixin & BlendMixin & ConstraintMixin & ExportMixin & BaseNodeMixin;
 const isSymbol = (node:BaseTypeNode) => node.type == "COMPONENT" || node.type == "INSTANCE";
 const isContainer = (node:BaseTypeNode) => node.type == "GROUP" || node.type == "FRAME";
 
-const sortByDepth = (a, b) => a.parent.children.indexOf(a) - b.parent.children.indexOf(b);
+const sortByDepth = (a: SceneNode, b: SceneNode) => a.parent.children.indexOf(a) - b.parent.children.indexOf(b);
 
 function getValidParent(parent:BaseParentNode, parents:BaseParentNode[] = []):BaseParentNode {
 	if (parent.type == "PAGE" && parents.length == 0) {
@@ -113,14 +112,11 @@ if (selection.length > 0) {
 
 		nodes.sort(sortByDepth);
 
-		let instanced = false;
-
 		nodes = nodes.map(node => {
 			if (node.type == "COMPONENT") {
 				const instance = node.createInstance();
 				instance.x = node.x;
 				instance.y = node.y;
-				instanced = true;
 				indexShift--;
 				return instance;
 			}
@@ -140,7 +136,7 @@ if (selection.length > 0) {
 		});
 
 		const container = nodes.length == 1 && isContainer(first);
-		let group:FrameNode = container ? (first as FrameNode) : figma.group(nodes, parent);
+		let group: FrameNode | GroupNode = container ? (first as FrameNode) : figma.group(nodes, parent);
 
 		let component = figma.createComponent();
 		component.x = nx;
@@ -150,7 +146,7 @@ if (selection.length > 0) {
 		const isFrame = group.type == "FRAME";
 
 		if (container) {
-			copyProps(component, group, group.type);
+			copyProps(component, group as PropsType, group.type);
 		} else if (nodes.length == 1) {
 			copyProps(component, first as PropsType, first.type);
 		}
